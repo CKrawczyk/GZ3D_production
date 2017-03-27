@@ -6,3 +6,4 @@
 !.gitignore
 !make_subject_fits.py
 !plot_fits_files.py
+!mpl_style.py
