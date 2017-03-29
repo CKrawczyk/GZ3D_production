@@ -46,7 +46,7 @@ style1 = {
 
     # Images
     'image.cmap': 'magma',
-    'image.origin': 'lower',
+    'image.origin': 'upper',
 
     # Saving
     'savefig.bbox': 'tight',
