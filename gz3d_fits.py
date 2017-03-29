@@ -159,6 +159,9 @@ class gz3d_fits(object):
         self.spiral_mask_spaxel = self._get_spaxel_mask(self.spiral_mask)
         self.bar_mask_spaxel = self._get_spaxel_mask(self.bar_mask)
 
+    def close(self):
+        self.hdulist.close()
+
     def __str__(self):
         return '\n'.join([
             'Subject info:',
