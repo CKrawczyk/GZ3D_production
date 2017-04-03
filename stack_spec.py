@@ -14,15 +14,31 @@ config.download = True
 def load_spectrum(cube, y, x):
     # a helper function to pull the spectra from the cube
     # this is because the built-in method is very slow
-    cube_hdu = cube.data
-    kwargs = {
-        'units': '1E-17 erg/s/cm^2/Ang/spaxel',
-        'wavelength': cube_hdu['WAVE'].data,
-        'wavelength_unit': 'Angstrom',
-        'ivar': cube_hdu['IVAR'].data[:, y, x],
-        'mask': cube_hdu['MASK'].data[:, y, x]
-    }
-    return Spectrum(cube_hdu['FLUX'].data[:, y, x], **kwargs)
+    if cube.data_origin == 'file':
+        cube_hdu = cube.data
+        kwargs = {
+            'units': '1E-17 erg/s/cm^2/Ang/spaxel',
+            'wavelength': cube_hdu['WAVE'].data,
+            'wavelength_unit': 'Angstrom',
+            'ivar': cube_hdu['IVAR'].data[:, y, x],
+            'mask': cube_hdu['MASK'].data[:, y, x]
+        }
+        flux_data = cube_hdu['FLUX'].data[:, y, x]
+    elif cube.data_origin == 'api':
+        # using the api is much slower than downloading
+        routeparams = {'name': cube.plateifu, 'x': x, 'y': y}
+        url = config.urlmap['api']['getSpectrum']['url'].format(**routeparams)
+        response = api.Interaction(url, params={'release': config.release})
+        data = response.getData()
+        kwargs = {
+            'units': '1E-17 erg/s/cm^2/Ang/spaxel',
+            'wavelength': data['wavelength'],
+            'wavelength_unit': 'Angstrom',
+            'ivar': data['ivar'],
+            'mask': data['mask']
+        }
+        flux_data = data['flux']
+    return Spectrum(flux_data, **kwargs)
 
 
 def mean_spectrum(spectra, weights=None):
@@ -48,12 +64,15 @@ def mean_spectrum(spectra, weights=None):
     return Spectrum(stack_flux, **kwargs)
 
 
-def stack_spectra(cube, maks):
+def stack_spectra(cube, mask):
     yy, xx = np.where(mask > 0)
     if len(yy) > 0:
         mask_value = mask[yy, xx]
         spectra = [load_spectrum(cube, y, x) for y, x in zip(yy, xx)]
-        return mean_spectrum(spectra, weights=mask_value)
+        if len(spectra) == 1:
+            return spectra[0]
+        else:
+            return mean_spectrum(spectra, weights=mask_value)
     else:
         return None
 
@@ -69,6 +88,8 @@ if __name__ == '__main__':
 
     mean_bar = stack_spectra(c, gz3d.bar_mask_spaxel)
     mean_spiral = stack_spectra(c, gz3d.spiral_mask_spaxel)
-    mean_bar.plot()
-    mean_spiral.plot()
+    ax, fig = mean_bar.plot(return_figure=True, label='bar')
+    mean_spiral.plot(figure=fig, label='spiral')
+    ax.set_title(c.mangaid)
+    plt.legend()
     plt.show()
