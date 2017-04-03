@@ -112,4 +112,4 @@ def make_plots(fits_location, output_folder):
 
 
 if __name__ == '__main__':
-    make_plots('/Volumes/Work/GZ3D/MPL5_fits', '/Volumes/Work/GZ3D/MPL5_plots')
+    make_plots('/Volumes/Work/GZ3D/MPL5_fits', '/Volumes/Work/GZ3D/MPL5_plots_v2')

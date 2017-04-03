@@ -8,7 +8,7 @@ from scipy.interpolate import RectBivariateSpline
 import json
 
 LUT = {7: 3, 19: 5, 37: 7, 61: 9, 91: 11, 127: 13}
-spaxel_grid = {7: 23, 19: 33, 37: 43, 61: 53, 91: 63, 127: 75}
+spaxel_grid = {7: 24, 19: 34, 37: 44, 61: 54, 91: 64, 127: 74}
 
 
 def convert_json(table, column_name):
@@ -178,6 +178,3 @@ class gz3d_fits(object):
             '    {0} center(s)'.format(self.num_centers),
             '    {0} star(s)'.format(self.num_stars)
         ])
-
-
-t = gz3d_fits('/Volumes/Work/GZ3D/MPL5_fits/1-285004_127_5679670.fits.gz')
