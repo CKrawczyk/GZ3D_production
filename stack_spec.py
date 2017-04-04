@@ -76,6 +76,15 @@ def stack_spectra(cube, mask):
     else:
         return None
 
+def get_stacked_spectra(gz3d):
+    manga_id = gz3d.metadata['MANGAID'][0]
+    c = Cube(mangaid=manga_id)
+    gz3d.make_all_spaxel_masks(grid_size=c.data['FLUX'].data.shape[1:])
+    mean_bar = stack_spectra(c, gz3d.bar_mask_spaxel)
+    mean_spiral = stack_spectra(c, gz3d.spiral_mask_spaxel)
+    mean_center = stack_spectra(c, gz3d.center_mask_spaxel)
+    c.data.close()
+    return mean_spiral, mean_bar, mean_center
 
 if __name__ == '__main__':
     manga_id = '1-284428'
@@ -84,12 +93,13 @@ if __name__ == '__main__':
 
     c = Cube(mangaid=manga_id)
     gz3d = gz3d_fits('{0}/{1}'.format(filepath, filename))
-    gz3d.make_all_spaxel_masks()
 
     mean_bar = stack_spectra(c, gz3d.bar_mask_spaxel)
     mean_spiral = stack_spectra(c, gz3d.spiral_mask_spaxel)
+    ylabel = r'Flux $[\rm 10^{-17}\,erg\,s^{-1}\,cm^{-2}\,\AA^{-1}]$'
     ax, fig = mean_bar.plot(return_figure=True, label='bar')
     mean_spiral.plot(figure=fig, label='spiral')
     ax.set_title(c.mangaid)
+    ax.set_ylabel(ylabel)
     plt.legend()
     plt.show()

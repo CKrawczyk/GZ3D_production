@@ -4,6 +4,7 @@ import mpl_style
 import os
 import progressbar as pb
 from gz3d_fits import gz3d_fits
+from stack_spec import get_stacked_spectra
 
 plt.style.use(mpl_style.style1)
 
@@ -69,12 +70,29 @@ def plot_original(data, grid, sub_grid_ratio=[1, 0.2]):
     return ax
 
 
-def gz3d_plot(filename, fdx, output_file, spaxel_grid=False):
+def plot_spectra(data, grid):
+    ax = plt.subplot(grid)
+    mean_spiral, mean_bar, mean_center = get_stacked_spectra(data)
+    if mean_center is not None:
+        ax.plot(mean_center.wavelength, mean_center.flux, color='C2', label='center', alpha=0.8)
+    if mean_bar is not None:
+        ax.plot(mean_bar.wavelength, mean_bar.flux, color='C1', label='bar', alpha=0.8)
+    if mean_spiral is not None:
+        ax.plot(mean_spiral.wavelength, mean_spiral.flux, color='C0', label='spiral', alpha=0.8)
+    ax.set_xlabel(r'Wavelength $[\rm\AA]$')
+    ax.set_ylabel(r'Flux $[\rm 10^{-17}\,erg\,s^{-1}\,cm^{-2}\,\AA^{-1}]$')
+    ax.set_ylim([0, None])
+    ax.set_title('Stacked spectra')
+    ax.legend(loc=1)
+    return ax
+
+
+def gz3d_plot(filename, fdx, output_folder, output_file, spaxel_grid=False):
     data = gz3d_fits(filename)
     fig_width = 16.4
-    fig_height = 9
+    fig_height = 13.5
     sub_grid_ratio = [0.95, 0.05]
-    gs = gridspec.GridSpec(2, 3)
+    gs = gridspec.GridSpec(3, 3)
     gs.update(left=0.05, right=0.94, bottom=0.05, top=0.94, wspace=0.5, hspace=0.3)
     fig = plt.figure(fdx, figsize=(fig_width, fig_height))
     # plot original image
@@ -93,7 +111,12 @@ def gz3d_plot(filename, fdx, output_file, spaxel_grid=False):
     ax = plot_mask(data, 'bar', gs[1, 1], sub_grid_ratio=sub_grid_ratio, spaxel_grid=spaxel_grid)
     ax.set_title('Bar \n {0} Classifications'.format(data.num_bar_classifications))
     # save figure and close data
-    fig.savefig('{0}.png'.format(output_file))
+    subfolder = 'no_mask'
+    if (data.bar_mask.sum() > 0) or (data.spiral_mask.sum() > 0):
+        ax = plot_spectra(data, gs[2, :])
+        subfolder = 'mask'
+    output_file = '{0}/{1}/{2}.png'.format(output_folder, subfolder, output_file)
+    fig.savefig(output_file)
     data.close()
     plt.close(fig)
 
@@ -105,11 +128,13 @@ def make_plots(fits_location, output_folder):
     pbar.start()
     for fdx, filename in enumerate(file_list):
         if '.fits.gz' in filename:
-            output_file = '{0}/{1}'.format(output_folder, filename.split('.')[0])
-            gz3d_plot(os.path.join(fits_location, filename), fdx, output_file)
+            output_file = filename.split('.')[0]
+            gz3d_plot(os.path.join(fits_location, filename), fdx, output_folder, output_file)
         pbar.update(fdx + 1)
     pbar.finish()
 
 
 if __name__ == '__main__':
-    make_plots('/Volumes/Work/GZ3D/MPL5_fits', '/Volumes/Work/GZ3D/MPL5_plots_v2')
+    import warnings
+    warnings.filterwarnings('ignore')
+    make_plots('/Volumes/Work/GZ3D/MPL5_fits', '/Volumes/Work/GZ3D/MPL5_plots_v3')

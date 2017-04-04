@@ -124,40 +124,43 @@ class gz3d_fits(object):
     def get_star_ellipse_list(self):
         return self._get_ellipse_list(self.star_clusters)
 
-    def _get_spaxel_grid_xy(self, include_edges=False):
+    def _get_spaxel_grid_xy(self, include_edges=False, grid_size=None):
+        if grid_size is None:
+            grid_size = (spaxel_grid[self.ifu_size], spaxel_grid[self.ifu_size])
         one_grid = 0.5 / 0.099
         c = self.center_in_pix()
-        grid = np.arange(spaxel_grid[self.ifu_size] + include_edges) * one_grid
-        grid_x = grid - np.median(grid) + c[0]
-        grid_y = grid - np.median(grid) + c[1]
+        grid_y = np.arange(grid_size[0] + include_edges) * one_grid
+        grid_x = np.arange(grid_size[1] + include_edges) * one_grid
+        grid_y = grid_y - np.median(grid_y) + c[0]
+        grid_x = grid_x - np.median(grid_x) + c[1]
         return grid_x, grid_y
 
-    def get_spaxel_grid(self):
-        grid_x, grid_y = self._get_spaxel_grid_xy(include_edges=True)
+    def get_spaxel_grid(self, grid_size=None):
+        grid_x, grid_y = self._get_spaxel_grid_xy(include_edges=True, grid_size=grid_size)
         v_line_x = np.array(zip(grid_x, grid_x)).T
         v_line_y = np.array([(grid_y[0], grid_y[-1])]).T
         h_line_x = np.array([(grid_x[0], grid_x[-1])]).T
         h_line_y = np.array(zip(grid_y, grid_y)).T
         return [(v_line_x, v_line_y), (h_line_x, h_line_y)]
 
-    def _get_spaxel_mask(self, mask):
+    def _get_spaxel_mask(self, mask, grid_size=None):
         # assues a 0.5 arcsec grid centered on the ifu's ra and dec
         # use a Bivariate spline approximation to resample maks to the spaxel grid
         xx = np.arange(mask.shape[1])
         yy = np.arange(mask.shape[0])
         s = RectBivariateSpline(xx, yy, mask)
-        grid_x, grid_y = self._get_spaxel_grid_xy()
+        grid_x, grid_y = self._get_spaxel_grid_xy(grid_size=grid_size)
         # flip the output mask so the origin is the lower left of the image
         s_mask = np.flipud(s(grid_x, grid_y))
         # zero out small values
         s_mask[s_mask < 0.5] = 0
         return s_mask
 
-    def make_all_spaxel_masks(self):
-        self.center_mask_spaxel = self._get_spaxel_mask(self.center_mask)
-        self.star_mask_spaxel = self._get_spaxel_mask(self.star_mask)
-        self.spiral_mask_spaxel = self._get_spaxel_mask(self.spiral_mask)
-        self.bar_mask_spaxel = self._get_spaxel_mask(self.bar_mask)
+    def make_all_spaxel_masks(self, grid_size=None):
+        self.center_mask_spaxel = self._get_spaxel_mask(self.center_mask, grid_size=grid_size)
+        self.star_mask_spaxel = self._get_spaxel_mask(self.star_mask, grid_size=grid_size)
+        self.spiral_mask_spaxel = self._get_spaxel_mask(self.spiral_mask, grid_size=grid_size)
+        self.bar_mask_spaxel = self._get_spaxel_mask(self.bar_mask, grid_size=grid_size)
 
     def close(self):
         self.hdulist.close()
