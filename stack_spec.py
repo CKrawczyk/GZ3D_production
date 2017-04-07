@@ -1,5 +1,5 @@
 from marvin import config
-from marvin_subclass import CubeFast, SpectrumStacker
+from marvin_subclass import CubeFast
 from gz3d_fits import gz3d_fits
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,12 +39,7 @@ def stack_spectra(cube, mask):
     if len(yy) > 0:
         mask_value = mask[yy, xx]
         spaxels = cube[yy, xx]
-        spectra = []
-        for spax in spaxels:
-            # re-class the spectra
-            spax.spectrum.__class__ = SpectrumStacker
-            spectra.append(spax.spectrum)
-        spectra = np.array(spectra)
+        spectra = np.array([s.spectrum for s in spaxels])
         if len(spectra) == 1:
             return spectra[0]
         else:

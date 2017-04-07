@@ -3,14 +3,6 @@ from marvin.tools.cube import Cube
 import numpy as np
 
 
-# make a subclass of Cube to give faster loding of spaxels
-# I only need the spectrum, so no properties need to be loaded
-class CubeFast(Cube):
-    def __getitem__(self, xy):
-        """Returns the spaxel for ``(x, y)`` without propserties"""
-        return self.getSpaxel(x=xy[0], y=xy[1], properties=False, xyorig='lower')
-
-
 # subclass Spectrum to add basic opperations
 # such as +, -, *, /, that handel ivar and bit masks correctly
 class SpectrumStacker(Spectrum):
@@ -95,3 +87,14 @@ class SpectrumStacker(Spectrum):
 
     def __truediv__(self, n):
         return self.__div__(n)
+
+
+# make a subclass of Cube to give faster loding of spaxels
+# and use the new SpectrumStacker subclass
+# I only need the spectrum, so no properties need to be loaded
+class CubeFast(Cube):
+    def __getitem__(self, xy):
+        """Returns the spaxel for ``(x, y)`` without propserties"""
+        spaxel = self.getSpaxel(x=xy[0], y=xy[1], properties=False, xyorig='lower')
+        spaxel.spectrum.__class__ = SpectrumStacker
+        return spaxel
