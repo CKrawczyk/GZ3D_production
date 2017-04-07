@@ -88,6 +88,9 @@ def plot_spectra(data, grid):
 
 
 def gz3d_plot(filename, fdx, output_folder, output_file, spaxel_grid=False):
+    if (os.path.isfile('{0}/no_mask/{1}.png'.format(output_folder, output_file))) or (os.path.isfile('{0}/mask/{1}.png'.format(output_folder, output_file))):
+        # don't re-make plots if they already exist
+        return 'already_exists'
     data = gz3d_fits(filename)
     fig_width = 16.4
     fig_height = 13.5
@@ -119,6 +122,7 @@ def gz3d_plot(filename, fdx, output_folder, output_file, spaxel_grid=False):
     fig.savefig(output_file)
     data.close()
     plt.close(fig)
+    return 'done'
 
 
 def make_plots(fits_location, output_folder):
@@ -129,7 +133,7 @@ def make_plots(fits_location, output_folder):
     for fdx, filename in enumerate(file_list):
         if '.fits.gz' in filename:
             output_file = filename.split('.')[0]
-            gz3d_plot(os.path.join(fits_location, filename), fdx, output_folder, output_file)
+            status = gz3d_plot(os.path.join(fits_location, filename), fdx, output_folder, output_file)                
         pbar.update(fdx + 1)
     pbar.finish()
 
