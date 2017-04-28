@@ -1,6 +1,21 @@
 from marvin.tools.spectrum import Spectrum
 from marvin.tools.cube import Cube
 import numpy as np
+import sys
+import traceback
+
+
+class Suppressor(object):
+    # A class to mute the output of a function
+    def __enter__(self):
+        self.stdout = sys.stdout
+        sys.stdout = self
+
+    def __exit__(self, type, value, traceback):
+        sys.stdout = self.stdout
+
+    def write(self, x):
+        pass
 
 
 # subclass Spectrum to add basic opperations
@@ -96,5 +111,9 @@ class CubeFast(Cube):
     def __getitem__(self, xy):
         """Returns the spaxel for ``(x, y)`` without propserties"""
         spaxel = self.getSpaxel(x=xy[0], y=xy[1], properties=False, xyorig='lower')
-        spaxel.spectrum.__class__ = SpectrumStacker
+        if isinstance(spaxel, list):
+            for s in spaxel:
+                s.spectrum.__class__ = SpectrumStacker
+        else:
+            spaxel.spectrum.__class__ = SpectrumStacker
         return spaxel

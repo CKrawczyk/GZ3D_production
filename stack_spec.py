@@ -1,23 +1,8 @@
 from marvin import config
-from marvin_subclass import CubeFast
+from marvin_subclass import CubeFast, Suppressor
 from gz3d_fits import gz3d_fits
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
-import traceback
-
-
-class Suppressor(object):
-    # A class to mute the output of a function
-    def __enter__(self):
-        self.stdout = sys.stdout
-        sys.stdout = self
-
-    def __exit__(self, type, value, traceback):
-        sys.stdout = self.stdout
-
-    def write(self, x):
-        pass
 
 
 # set marvin to local mode
@@ -34,11 +19,14 @@ def mean_spectrum(spectra, weights=None):
     return stack / weights[inside_ifu].sum()
 
 
-def stack_spectra(cube, mask):
+def stack_spectra(gz3d, mask_name, inv=False):
+    mask = getattr(gz3d, mask_name)
+    if inv:
+        mask = inv_mask(mask)
     yy, xx = np.where(mask > 0)
     if len(yy) > 0:
         mask_value = mask[yy, xx]
-        spaxels = cube[yy, xx]
+        spaxels = gz3d.cube[yy, xx]
         spectra = np.array([s.spectrum for s in spaxels])
         if len(spectra) == 1:
             return spectra[0]
@@ -52,25 +40,19 @@ def inv_mask(mask):
     return mask.max() - mask
 
 
-def get_stacked_spectra(gz3d, cube=None, return_inv=False):
-    manga_id = gz3d.metadata['MANGAID'][0]
+def get_stacked_spectra(gz3d, return_inv=False):
     output = []
     try:
-        if cube is not None:
-            c = cube
-        else:
-            with Suppressor():
-                # mute marvin so there are no `SDSS_ACCESS` prints to stdout
-                c = CubeFast(mangaid=manga_id)
-        gz3d.make_all_spaxel_masks(grid_size=c.data['FLUX'].data.shape[1:])
-        mean_bar = stack_spectra(c, gz3d.bar_mask_spaxel)
-        mean_spiral = stack_spectra(c, gz3d.spiral_mask_spaxel)
-        mean_center = stack_spectra(c, gz3d.center_mask_spaxel)
+        gz3d.get_cube()
+        gz3d.make_all_spaxel_masks()
+        mean_bar = stack_spectra(gz3d, 'bar_mask_spaxel')
+        mean_spiral = stack_spectra(gz3d, 'spiral_mask_spaxel')
+        mean_center = stack_spectra(gz3d, 'center_mask_spaxel')
         output += [mean_spiral, mean_bar, mean_center]
         if return_inv:
-            mean_not_bar = stack_spectra(c, inv_mask(gz3d.bar_mask_spaxel))
-            mean_not_spiral = stack_spectra(c, inv_mask(gz3d.spiral_mask_spaxel))
-            mean_not_center = stack_spectra(c, inv_mask(gz3d.center_mask_spaxel))
+            mean_not_bar = stack_spectra(gz3d, 'bar_mask_spaxel', inv=True)
+            mean_not_spiral = stack_spectra(gz3d, 'spiral_mask_spaxel', inv=True)
+            mean_not_center = stack_spectra(gz3d, 'center_mask_spaxel', inv=True)
             output += [mean_not_spiral, mean_not_bar, mean_not_center]
         if cube is None:
             c.data.close()
@@ -82,13 +64,12 @@ def get_stacked_spectra(gz3d, cube=None, return_inv=False):
 
 
 if __name__ == '__main__':
-    manga_id = '1-284428'
     filepath = '/Volumes/Work/GZ3D/MPL5_fits'
     filename = '1-284428_127_5679016.fits.gz'
 
-    c = Cube(mangaid=manga_id)
     gz3d = gz3d_fits('{0}/{1}'.format(filepath, filename))
-    gz3d.make_all_spaxel_masks(grid_size=c.data['FLUX'].data.shape[1:])
+    gz3d.get_cube()
+    gz3d.make_all_spaxel_masks()
 
     mean_bar = stack_spectra(c, gz3d.bar_mask_spaxel)
     mean_spiral = stack_spectra(c, gz3d.spiral_mask_spaxel)

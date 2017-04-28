@@ -36,7 +36,7 @@ style1 = {
 
     # Legend
     'legend.fancybox': True,
-    'legend.fontsize': 'large',
+    'legend.fontsize': 'small',
     'legend.scatterpoints': 5,
     'legend.loc': 'best',
 

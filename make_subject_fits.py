@@ -272,5 +272,6 @@ def make_subject_fits(full_subject_set_id, center_workflow_id, spiral_workflow_i
         pbar.update(idx)
     pbar.finish()
 
+
 if __name__ == '__main__':
     make_subject_fits(8199, 3513, 3515, 3514, dimensions=[525, 525], image_location='/Volumes/SD_Extra/manga_images_production/MPL5', output='/Volumes/Work/GZ3D/MPL5_fits')

@@ -6,9 +6,17 @@ import matplotlib.patches as patches
 import scipy.linalg as sl
 from scipy.interpolate import RectBivariateSpline
 import json
+from marvin import config
+from marvin_subclass import CubeFast, Suppressor
+import marvin.utils.dap.bpt as bpt
 
 LUT = {7: 3, 19: 5, 37: 7, 61: 9, 91: 11, 127: 13}
 spaxel_grid = {7: 24, 19: 34, 37: 44, 61: 54, 91: 64, 127: 74}
+
+# set marvin to local mode
+# downloading the cubes gives faster access to the spectra
+config.mode = 'local'
+config.download = True
 
 
 def convert_json(table, column_name):
@@ -53,6 +61,20 @@ class gz3d_fits(object):
         self.process_clusters_classifications()
         self.process_spiral_classifications()
         self.process_bar_classifications()
+        self.cube = None
+        self.maps = None
+        self.spaxel_masks = False
+        self.mean_bar = None
+        self.mean_spiral = None
+        self.mean_center = None
+        self.mean_not_bar = None
+        self.mean_not_spiral = None
+        self.mean_not_center = None
+        self.log_oiii_hb = None
+        self.log_nii_ha = None
+        self.log_sii_ha = None
+        self.log_oi_ha = None
+        self.dis = None
 
     def process_images(self):
         # read in images
@@ -126,7 +148,10 @@ class gz3d_fits(object):
 
     def _get_spaxel_grid_xy(self, include_edges=False, grid_size=None):
         if grid_size is None:
-            grid_size = (spaxel_grid[self.ifu_size], spaxel_grid[self.ifu_size])
+            if self.cube is not None:
+                grid_size = self.cube.data['FLUX'].data.shape[1:]
+            else:
+                grid_size = (spaxel_grid[self.ifu_size], spaxel_grid[self.ifu_size])
         one_grid = 0.5 / 0.099
         c = self.center_in_pix()
         grid_y = np.arange(grid_size[0] + include_edges) * one_grid
@@ -157,13 +182,100 @@ class gz3d_fits(object):
         return s_mask
 
     def make_all_spaxel_masks(self, grid_size=None):
-        self.center_mask_spaxel = self._get_spaxel_mask(self.center_mask, grid_size=grid_size)
-        self.star_mask_spaxel = self._get_spaxel_mask(self.star_mask, grid_size=grid_size)
-        self.spiral_mask_spaxel = self._get_spaxel_mask(self.spiral_mask, grid_size=grid_size)
-        self.bar_mask_spaxel = self._get_spaxel_mask(self.bar_mask, grid_size=grid_size)
+        if not self.spaxel_masks:
+            self.center_mask_spaxel = self._get_spaxel_mask(self.center_mask, grid_size=grid_size)
+            self.star_mask_spaxel = self._get_spaxel_mask(self.star_mask, grid_size=grid_size)
+            self.spiral_mask_spaxel = self._get_spaxel_mask(self.spiral_mask, grid_size=grid_size)
+            self.bar_mask_spaxel = self._get_spaxel_mask(self.bar_mask, grid_size=grid_size)
+            self.other_mask_spaxel = (self.spiral_mask_spaxel == 0) & (self.bar_mask_spaxel == 0) & (self.center_mask_spaxel == 0)
+            self.spaxel_masks = True
+
+    def get_cube(self, maps=False):
+        manga_id = self.metadata['MANGAID'][0]
+        try:
+            with Suppressor():
+                # mute marvin so there are no `SDSS_ACCESS` prints to stdout
+                if (self.cube is None):
+                    self.cube = CubeFast(mangaid=manga_id)
+                if (maps) and (self.maps is None):
+                    self.maps = self.cube.getMaps()
+        except:
+            self.cube = 'no_data'
+            if maps:
+                self.maps = 'no_data'
+
+    def _stack_spectra(self, mask_name, inv=False):
+        mask = getattr(self, mask_name)
+        if inv:
+            mask = mask.max() - mask
+        mdx = np.where(mask > 0)
+        if len(mdx[0] > 0):
+            weights = mask[mdx]
+            spaxels = self.cube[mdx]
+            spectra = np.array([s.spectrum for s in spaxels])
+            if len(spectra) == 1:
+                return spectra[0]
+            else:
+                inside_ifu = np.array([s.inside_ifu() for s in spectra])
+                return (spectra[inside_ifu] * weights[inside_ifu]).sum() / weights[inside_ifu].sum()
+        else:
+            return None
+
+    def get_mean_spectra(self, inv=False):
+        self.get_cube()
+        if self.cube != 'no_data':
+            self.make_all_spaxel_masks()
+            self.mean_bar = self._stack_spectra('bar_mask_spaxel')
+            self.mean_spiral = self._stack_spectra('spiral_mask_spaxel')
+            self.mean_center = self._stack_spectra('center_mask_spaxel')
+            if inv:
+                self.mean_not_bar = self._stack_spectra('bar_mask_spaxel', inv=True)
+                self.mean_not_spiral = self._stack_spectra('spiral_mask_spaxel', inv=True)
+                self.mean_not_center = self._stack_spectra('center_mask_spaxel', inv=True)
+
+    def get_bpt(self, snr_min=3):
+        self.get_cube(maps=True)
+        if self.cube != 'no_data':
+            # Gets the necessary emission line maps
+            oiii = bpt.get_masked(self.maps, 'oiii_5008', snr=bpt.get_snr(snr_min, 'oiii'))
+            nii = bpt.get_masked(self.maps, 'nii_6585', snr=bpt.get_snr(snr_min, 'nii'))
+            ha = bpt.get_masked(self.maps, 'ha_6564', snr=bpt.get_snr(snr_min, 'ha'))
+            hb = bpt.get_masked(self.maps, 'hb_4862', snr=bpt.get_snr(snr_min, 'hb'))
+            sii = bpt.get_masked(self.maps, 'sii_6718', snr=bpt.get_snr(snr_min, 'sii'))
+            oi = bpt.get_masked(self.maps, 'oi_6302', snr=bpt.get_snr(snr_min, 'oi'))
+            self.log_oiii_hb = np.ma.log10(oiii / hb)
+            self.log_nii_ha = np.ma.log10(nii / ha)
+            self.log_sii_ha = np.ma.log10(sii / ha)
+            self.log_oi_ha = np.ma.log10(oi / ha)
+
+    def bpt_in_mask(self, mask_name, bpt_name, factor=1.2):
+        self.get_distance()
+        if self.cube != 'no_data':
+            mask = getattr(self, mask_name)
+            bpt_data = getattr(self, bpt_name)
+            outside = self.log_oiii_hb.mask | bpt_data.mask
+            mdx = np.where((mask > 0) & (~outside))
+            order = np.argsort(self.dis[mdx])
+            dis_max = 1
+            if (~outside).sum() > 0:
+                dis_max = self.dis[~outside].max() * factor
+            return bpt_data[mdx][order], self.log_oiii_hb[mdx][order], self.dis[mdx][order] / dis_max
+
+    def get_distance(self):
+        if self.dis is None:
+            self.make_all_spaxel_masks()
+            cdx = np.unravel_index(self.center_mask_spaxel.argmax(), self.center_mask_spaxel.shape)
+            self.dis = np.zeros_like(self.center_mask_spaxel)
+            for yy in range(self.dis.shape[0]):
+                for xx in range(self.dis.shape[1]):
+                    self.dis[yy, xx] = np.linalg.norm([yy - cdx[0], xx - cdx[1]])
 
     def close(self):
         self.hdulist.close()
+        if (self.cube is not None) and (self.cube != 'no_data'):
+            self.cube.data.close()
+        if (self.maps is not None) and (self.maps != 'no_data'):
+            self.maps.data.close()
 
     def __str__(self):
         return '\n'.join([

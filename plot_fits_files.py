@@ -33,7 +33,7 @@ def make_ax(grid, projection, **kwargs):
     return ax
 
 
-def plot_mask(data, kind, grid, cmap=plt.cm.Purples, sub_grid_ratio=[1, 0.2], spaxel_grid=False):
+def plot_mask(data, kind, grid, cmap=plt.cm.Purples, sub_grid_ratio=[0.95, 0.05], spaxel_grid=False):
     gs_inner = gridspec.GridSpecFromSubplotSpec(1, 2, width_ratios=sub_grid_ratio, subplot_spec=grid)
     ax = make_ax(gs_inner[0], data.wcs, color_grid='C0', color_tick='black')
     ax.add_patch(data.get_hexagon())
@@ -62,7 +62,7 @@ def plot_ellipse(data, kind, *mask_params, **mask_kwargs):
     return ax
 
 
-def plot_original(data, grid, sub_grid_ratio=[1, 0.2]):
+def plot_original(data, grid, sub_grid_ratio=[0.95, 0.05]):
     gs_inner = gridspec.GridSpecFromSubplotSpec(1, 2, width_ratios=sub_grid_ratio, subplot_spec=grid)
     ax = make_ax(gs_inner[0], data.wcs, color_grid='C0')
     ax.add_patch(data.get_hexagon(correct_hex=True, edgecolor='C4'))
@@ -133,7 +133,7 @@ def make_plots(fits_location, output_folder):
     for fdx, filename in enumerate(file_list):
         if '.fits.gz' in filename:
             output_file = filename.split('.')[0]
-            status = gz3d_plot(os.path.join(fits_location, filename), fdx, output_folder, output_file)                
+            status = gz3d_plot(os.path.join(fits_location, filename), fdx, output_folder, output_file)
         pbar.update(fdx + 1)
     pbar.finish()
 
