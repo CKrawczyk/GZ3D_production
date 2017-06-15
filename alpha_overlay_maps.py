@@ -1,6 +1,8 @@
 import matplotlib as mpl
+import matplotlib.gridspec as gridspec
 import numpy as np
 from plot_fits_files import set_up_axes
+import matplotlib.pyplot as plt
 
 
 def alpha_overlay(C_a, a_a, C_b, a_b=None):
@@ -41,11 +43,13 @@ def plot_alpha_bar(color, grid, ticks=[]):
     bar, norm = make_alpha_bar(color)
     ax_bar = plt.subplot(grid)
     cb = mpl.colorbar.ColorbarBase(ax_bar, cmap=bar, norm=norm, orientation='vertical', ticks=ticks)
+    cb.outline.set_linewidth(0)
     return ax_bar, cb
 
 
-def plot_masks(gz3d, grid, colors = ['C1', 'C0', 'C3', 'C2']):
-    gs = gridspec.GridSpecFromSubplotSpec(1, 5, width_ratios=[0.84, 0.04, 0.04, 0.04, 0.04], wspace=0.015, subplot_spec=grid)
+def plot_masks(gz3d, grid, colors=['C1', 'C0', 'C3', 'C2'], sub_grid_ratio=[0.95, 0.05]):
+    gs = gridspec.GridSpecFromSubplotSpec(1, 2, width_ratios=sub_grid_ratio, subplot_spec=grid, wspace=0.01)
+    gs_inner = gridspec.GridSpecFromSubplotSpec(1, 4, wspace=0, subplot_spec=gs[1])
     maps = [gz3d.bar_mask, gz3d.spiral_mask, gz3d.star_mask, gz3d.center_mask]
     all_mask = alpha_maps(maps, colors)
     # plot image
@@ -63,31 +67,30 @@ def plot_masks(gz3d, grid, colors = ['C1', 'C0', 'C3', 'C2']):
     for e in star_ellip:
         ax1.add_artist(e)
     # make a legend
-    bar_patch = mpatches.Patch(color=colors[0], label='Bar')
-    spiral_patch = mpatches.Patch(color=colors[1], label='Spiral')
-    star_patch = mpatches.Patch(color=colors[2], label='Star')
-    center_patch = mpatches.Patch(color=colors[3], label='Center')
-    plt.legend(handles=[bar_patch, spiral_patch, star_patch, center_patch], ncol=4, loc='lower center', mode='expand')
+    bar_patch = mpl.patches.Patch(color=colors[0], label='Bar')
+    spiral_patch = mpl.patches.Patch(color=colors[1], label='Spiral')
+    star_patch = mpl.patches.Patch(color=colors[2], label='Star')
+    center_patch = mpl.patches.Patch(color=colors[3], label='Center')
+    plt.legend(handles=[bar_patch, spiral_patch, star_patch, center_patch], ncol=2, loc='lower center', mode='expand')
     # make colorbars
-    ax_bar, cb_bar = plot_alpha_bar(colors[0], gs[1])
-    ax_spiral, cb_spiral = plot_alpha_bar(colors[1], gs[2])
-    ax_star, cb_star = plot_alpha_bar(colors[2], gs[3])
-    ax_center, cb_center = plot_alpha_bar(colors[3], gs[4])
+    ax_bar, cb_bar = plot_alpha_bar(colors[0], gs_inner[0])
+    ax_spiral, cb_spiral = plot_alpha_bar(colors[1], gs_inner[1])
+    ax_star, cb_star = plot_alpha_bar(colors[2], gs_inner[2])
+    ax_center, cb_center = plot_alpha_bar(colors[3], gs_inner[3])
+    ax_center.tick_params(axis=u'both', which=u'both', length=0)
     tick_labels = np.arange(0, 16)
     tick_locs = tick_labels - 0.5
     cb_center.set_ticks(tick_locs)
     cb_center.set_ticklabels(tick_labels)
     cb_center.set_label('Count')
+    return ax1
 
 
 if __name__ == '__main__':
     from gz3d_fits import gz3d_fits
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as mpatches
-    import matplotlib.gridspec as gridspec
     file_name = '/Volumes/Work/GZ3D/MPL5_fits/1-167242_127_5679242.fits.gz'
     gz3d = gz3d_fits(file_name)
     fig = plt.figure(1)
     gs = gridspec.GridSpec(1, 1)
-    plot_masks(gz3d, gs[0])
+    plot_masks(gz3d, gs[0], sub_grid_ratio=[0.9, 0.1])
     plt.show()

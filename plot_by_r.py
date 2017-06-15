@@ -1,20 +1,25 @@
 import matplotlib as mpl
 import numpy as np
 
-def plot_alpha_scatter(x, y, mask, color, ax, snr=3, sf_mask=None, **kwargs):
-    mdx = mask > 0
-    ydx = y.value > 0
-    sdx = y.snr > snr
-    idx = mdx & ydx & sdx
+
+def plot_alpha_scatter(x, y, mask, color, ax, snr=None, sf_mask=None, value=True, **kwargs):
+    idx = mask > 0
+    if value:
+        idx = idx & (y.value > 0)
+    if (value) and (snr is not None):
+        idx = idx & (y.snr > snr)
     if sf_mask is not None:
         idx = idx & sf_mask
     c = mpl.colors.to_rgb(color)
     c_a = np.array([c + (i, ) for i in mask[idx] / 15])
     c_a[c_a > 1] = 1
-    return ax.scatter(x[idx], y.value[idx], c=c_a, **kwargs)
+    if value:
+        return ax.scatter(x[idx], y.value[idx], c=c_a, edgecolor=c_a, **kwargs)
+    else:
+        return ax.scatter(x[idx], y[idx], c=c_a, edgecolor=c_a, **kwargs)
 
 
-def plot_by_r(gz3d, ax, key='specindex_dn4000', ylabel=r'$D_{n}4000$', snr=3, sf_only=False):
+def plot_by_r(gz3d, ax, key='specindex_dn4000', ylabel=r'$D_{n}4000$', snr=3, sf_only=False, s=15):
     title = 'S/N > {0}'.format(snr)
     r = gz3d.maps['spx_ellcoo_elliptical_radius'].value
     r_50 = gz3d.maps.nsa['petro_th50']
@@ -24,28 +29,28 @@ def plot_by_r(gz3d, ax, key='specindex_dn4000', ylabel=r'$D_{n}4000$', snr=3, sf
         sf_mask = gz3d.sf_mask
         title += ', star forming only'
     # plot scatter points
-    plot_alpha_scatter(r/r_50, line, gz3d.spiral_mask_spaxel, 'C0', ax, s=15, snr=snr, sf_mask=sf_mask)
-    plot_alpha_scatter(r/r_50, line, gz3d.bar_mask_spaxel, 'C1', ax, s=15, snr=snr, sf_mask=sf_mask)
-    plot_alpha_scatter(r/r_50, line, gz3d.star_mask_spaxel, 'C3', ax, s=15, snr=snr, sf_mask=sf_mask)
-    plot_alpha_scatter(r/r_50, line, gz3d.center_mask_spaxel, 'C2', ax, s=15, snr=snr, sf_mask=sf_mask)
+    plot_alpha_scatter(r / r_50, line, gz3d.spiral_mask_spaxel, 'C0', ax, s=s, snr=snr, sf_mask=sf_mask)
+    plot_alpha_scatter(r / r_50, line, gz3d.bar_mask_spaxel, 'C1', ax, s=s, snr=snr, sf_mask=sf_mask)
+    plot_alpha_scatter(r / r_50, line, gz3d.star_mask_spaxel, 'C3', ax, s=s, snr=snr, sf_mask=sf_mask)
+    plot_alpha_scatter(r / r_50, line, gz3d.center_mask_spaxel, 'C2', ax, s=s, snr=snr, sf_mask=sf_mask)
     ax.set_title(title)
     ax.set_ylabel(ylabel)
     ax.set_xlabel(r'R / R$_{50}$')
 
 
-def plot_by_theta(gz3d, ax, key='specindex_dn4000', ylabel=r'$D_{n}4000$', snr=3, sf_only=False):
+def plot_by_theta(gz3d, ax, key='specindex_dn4000', ylabel=r'$D_{n}4000$', snr=3, sf_only=False, s=15):
     title = 'S/N > {0}'.format(snr)
     theta = gz3d.maps['spx_ellcoo_elliptical_azimuth'].value
     line = gz3d.maps[key]
-    sf_mask=None
+    sf_mask = None
     if sf_only:
         sf_mask = gz3d.sf_mask
         title += ', star forming only'
     # plot scatter points
-    plot_alpha_scatter(theta, line, gz3d.spiral_mask_spaxel, 'C0', ax, s=15, snr=snr, sf_mask=sf_mask)
-    plot_alpha_scatter(theta, line, gz3d.bar_mask_spaxel, 'C1', ax, s=15, snr=snr, sf_mask=sf_mask)
-    plot_alpha_scatter(theta, line, gz3d.star_mask_spaxel, 'C3', ax, s=15, snr=snr, sf_mask=sf_mask)
-    plot_alpha_scatter(theta, line, gz3d.center_mask_spaxel, 'C2', ax, s=15, snr=snr, sf_mask=sf_mask)
+    plot_alpha_scatter(theta, line, gz3d.spiral_mask_spaxel, 'C0', ax, s=s, snr=snr, sf_mask=sf_mask)
+    plot_alpha_scatter(theta, line, gz3d.bar_mask_spaxel, 'C1', ax, s=s, snr=snr, sf_mask=sf_mask)
+    plot_alpha_scatter(theta, line, gz3d.star_mask_spaxel, 'C3', ax, s=s, snr=snr, sf_mask=sf_mask)
+    plot_alpha_scatter(theta, line, gz3d.center_mask_spaxel, 'C2', ax, s=s, snr=snr, sf_mask=sf_mask)
     ax.set_title(title)
     ax.set_ylabel(ylabel)
     ax.set_xlabel(r'$\theta$')

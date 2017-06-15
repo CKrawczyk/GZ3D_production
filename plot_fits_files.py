@@ -63,8 +63,8 @@ def plot_ellipse(data, kind, *mask_params, **mask_kwargs):
 
 
 def plot_original(data, grid, sub_grid_ratio=[0.95, 0.05]):
-    gs_inner = gridspec.GridSpecFromSubplotSpec(1, 2, width_ratios=sub_grid_ratio, subplot_spec=grid)
-    ax = make_ax(gs_inner[0], data.wcs, color_grid='C0')
+    gs_inner = gridspec.GridSpecFromSubplotSpec(1, 2, width_ratios=sub_grid_ratio, subplot_spec=grid, wspace=0.01)
+    ax = make_ax(gs_inner[0], data.wcs, color_grid='C7')
     ax.add_patch(data.get_hexagon(correct_hex=True, edgecolor='C4'))
     ax.imshow(data.image)
     return ax
