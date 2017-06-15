@@ -1,13 +1,5 @@
 # Ignore everything (this is a big working directory and I only want to track a few files)
-*
-
-# whitelist the files to track
-!README.md
-!.gitignore
-!make_subject_fits.py
-!plot_fits_files.py
-!mpl_style.py
-!gz3d_fits.py
-!stack_spec.py
-!marvin_subclass.py
-!plot_fits_with_bpt.py
+other_scripts
+*.pyc
+.ipynb_checkpoints
+bar_or_spiral.txt

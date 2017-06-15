@@ -247,6 +247,10 @@ class gz3d_fits(object):
             self.log_nii_ha = np.ma.log10(nii / ha)
             self.log_sii_ha = np.ma.log10(sii / ha)
             self.log_oi_ha = np.ma.log10(oi / ha)
+            sf_mask_nii = ((self.log_oiii_hb < bpt.kewley_sf_nii(self.log_nii_ha)) & (self.log_nii_ha < 0.05)).filled(False)
+            sf_mask_sii = ((self.log_oiii_hb < bpt.kewley_sf_sii(self.log_sii_ha)) & (self.log_sii_ha < 0.32)).filled(False)
+            sf_mask_oi = ((self.log_oiii_hb < bpt.kewley_sf_oi(self.log_oi_ha)) & (self.log_oi_ha < -0.59)).filled(False)
+            self.sf_mask = sf_mask_nii & sf_mask_sii & sf_mask_oi
 
     def bpt_in_mask(self, mask_name, bpt_name, factor=1.2):
         self.get_distance()
