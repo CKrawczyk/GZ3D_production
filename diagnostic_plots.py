@@ -10,7 +10,7 @@ from plot_by_r import plot_by_r, plot_by_theta
 plt.style.use(mpl_style.style1)
 
 
-def diagnotic_plots(filename, output_name=None, fdx=1):
+def diagnostic_plots(filename, output_name=None, fdx=1):
     gz3d = gz3d_fits(filename)
     gz3d.make_all_spaxel_masks()
     gz3d.get_bpt()
@@ -48,9 +48,10 @@ def diagnotic_plots(filename, output_name=None, fdx=1):
     if output_name is not None:
         fig.savefig('{0}.png'.format(output_name))
     gz3d.close()
+    plt.close(fig)
 
 
 if __name__ == '__main__':
     file_name = '/Volumes/Work/GZ3D/MPL5_fits/1-167242_127_5679242.fits.gz'
-    diagnotic_plots(file_name)
+    diagnostic_plots(file_name)
     plt.show()

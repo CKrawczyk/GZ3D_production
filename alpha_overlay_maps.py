@@ -3,6 +3,7 @@ import matplotlib.gridspec as gridspec
 import numpy as np
 from plot_fits_files import set_up_axes
 import matplotlib.pyplot as plt
+from plot_by_r import zero_theta_line
 
 
 def alpha_overlay(C_a, a_a, C_b, a_b=None):
@@ -39,6 +40,12 @@ def make_alpha_bar(color, vmin=-1, vmax=15):
     return mpl.colors.ListedColormap(new_cm), norm
 
 
+def make_alpha_color(count, color, vmin=1, vmax=15):
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+    a = min(norm(count), 1)
+    return mpl.colors.to_rgb(color) + (a, )
+
+
 def plot_alpha_bar(color, grid, ticks=[]):
     bar, norm = make_alpha_bar(color)
     ax_bar = plt.subplot(grid)
@@ -61,11 +68,17 @@ def plot_masks(gz3d, grid, colors=['C1', 'C0', 'C3', 'C2'], sub_grid_ratio=[0.95
     ax1.add_patch(gz3d.get_hexagon(correct_hex=True, edgecolor='C4'))
     # plot center and star ellipses
     center_ellip = gz3d.get_center_ellipse_list()
-    for e in center_ellip:
+    for e, count in zip(center_ellip, gz3d.center_clusters['count']):
+        e.set_edgecolor(make_alpha_color(count, 'C2'))
         ax1.add_artist(e)
     star_ellip = gz3d.get_star_ellipse_list()
-    for e in star_ellip:
+    for e, count in zip(star_ellip, gz3d.star_clusters['count']):
+        e.set_edgecolor(make_alpha_color(count, 'C3'))
         ax1.add_artist(e)
+    # plot theta=0 line
+    x_theta, y_theta = zero_theta_line(gz3d)
+    ax1.plot(x_theta, y_theta, 'C5')
+    ax1.annotate(r'$\theta$', xy=(0.2, 0.8), xytext=(0.05, 0.9), arrowprops={'arrowstyle': '->', 'connectionstyle': 'angle3'}, xycoords='axes fraction', textcoords='axes fraction')
     # make a legend
     bar_patch = mpl.patches.Patch(color=colors[0], label='Bar')
     spiral_patch = mpl.patches.Patch(color=colors[1], label='Spiral')
@@ -90,6 +103,7 @@ if __name__ == '__main__':
     from gz3d_fits import gz3d_fits
     file_name = '/Volumes/Work/GZ3D/MPL5_fits/1-167242_127_5679242.fits.gz'
     gz3d = gz3d_fits(file_name)
+    gz3d.get_bpt()
     fig = plt.figure(1)
     gs = gridspec.GridSpec(1, 1)
     plot_masks(gz3d, gs[0], sub_grid_ratio=[0.9, 0.1])

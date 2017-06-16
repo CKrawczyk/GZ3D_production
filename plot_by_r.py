@@ -1,5 +1,6 @@
 import matplotlib as mpl
 import numpy as np
+import astropy.wcs as wcs
 
 
 def plot_alpha_scatter(x, y, mask, color, ax, snr=None, sf_mask=None, value=True, **kwargs):
@@ -22,7 +23,7 @@ def plot_alpha_scatter(x, y, mask, color, ax, snr=None, sf_mask=None, value=True
 def plot_by_r(gz3d, ax, key='specindex_dn4000', ylabel=r'$D_{n}4000$', snr=3, sf_only=False, s=15):
     title = 'S/N > {0}'.format(snr)
     r = gz3d.maps['spx_ellcoo_elliptical_radius'].value
-    r_50 = gz3d.maps.nsa['petro_th50']
+    r_50 = gz3d.maps.nsa['elpetro_th50_r']
     line = gz3d.maps[key]
     sf_mask = None
     if sf_only:
@@ -51,9 +52,28 @@ def plot_by_theta(gz3d, ax, key='specindex_dn4000', ylabel=r'$D_{n}4000$', snr=3
     plot_alpha_scatter(theta, line, gz3d.bar_mask_spaxel, 'C1', ax, s=s, snr=snr, sf_mask=sf_mask)
     plot_alpha_scatter(theta, line, gz3d.star_mask_spaxel, 'C3', ax, s=s, snr=snr, sf_mask=sf_mask)
     plot_alpha_scatter(theta, line, gz3d.center_mask_spaxel, 'C2', ax, s=s, snr=snr, sf_mask=sf_mask)
+    ax.set_xticks([0, 90, 180, 270, 360])
     ax.set_title(title)
     ax.set_ylabel(ylabel)
     ax.set_xlabel(r'$\theta$')
+
+
+def zero_theta_line(gz3d):
+    phi = gz3d.maps.nsa['elpetro_phi']
+    ra = gz3d.cube.ra
+    dec = gz3d.cube.dec
+    map_wcs = wcs.WCS(gz3d.maps['spx_ellcoo_elliptical_azimuth'].header, naxis=2)
+    # get the center of the image
+    cx, cy = map_wcs.wcs_world2pix(ra, dec, 0)
+    # get the max radius
+    r = np.sqrt(cx**2 + cy**2)
+    # get the end of the line
+    x = r * np.sin(np.deg2rad(-phi)) + cx
+    y = r * np.cos(np.deg2rad(-phi)) + cy
+    # world coords
+    ra, dec = map_wcs.wcs_pix2world([cx, x], [cy, y], 0)
+    # image coords
+    return gz3d.wcs.wcs_world2pix(ra, dec, 0)
 
 
 if __name__ == '__main__':
