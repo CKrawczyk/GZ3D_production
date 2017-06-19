@@ -10,10 +10,10 @@ from plot_by_r import plot_by_r, plot_by_theta
 plt.style.use(mpl_style.style1)
 
 
-def diagnostic_plots(filename, output_name=None, fdx=1):
+def diagnostic_plots(filename, output_name=None, fdx=1, oi_sf=False):
     gz3d = gz3d_fits(filename)
+    gz3d.get_bpt(oi_sf=oi_sf)
     gz3d.make_all_spaxel_masks()
-    gz3d.get_bpt()
     fig_width = 21.9
     fig_height = 13.5
     gs = gridspec.GridSpec(3, 4)

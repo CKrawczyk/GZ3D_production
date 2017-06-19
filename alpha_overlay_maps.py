@@ -16,7 +16,7 @@ def alpha_overlay(C_a, a_a, C_b, a_b=None):
 
 
 def alpha_maps(maps, colors=None, vmin=0, vmax=15):
-    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax, clip=True)
     iter_cycle = iter(mpl.rcParams['axes.prop_cycle'])
     for mdx, m in enumerate(maps):
         if colors is None:
@@ -33,7 +33,7 @@ def alpha_maps(maps, colors=None, vmin=0, vmax=15):
 
 def make_alpha_bar(color, vmin=-1, vmax=15):
     # vmin of -1 to make lables line up correctly
-    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax, clip=True)
     a_a = norm(range(vmin, vmax))
     C_a = np.array(mpl.colors.to_rgb(color))
     new_cm = alpha_overlay(C_a, a_a, np.ones(3))
@@ -41,9 +41,8 @@ def make_alpha_bar(color, vmin=-1, vmax=15):
 
 
 def make_alpha_color(count, color, vmin=1, vmax=15):
-    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
-    a = min(norm(count), 1)
-    return mpl.colors.to_rgb(color) + (a, )
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax, clip=True)
+    return mpl.colors.to_rgb(color) + (norm(count), )
 
 
 def plot_alpha_bar(color, grid, ticks=[]):

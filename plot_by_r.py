@@ -60,20 +60,20 @@ def plot_by_theta(gz3d, ax, key='specindex_dn4000', ylabel=r'$D_{n}4000$', snr=3
 
 def zero_theta_line(gz3d):
     phi = gz3d.maps.nsa['elpetro_phi']
-    ra = gz3d.cube.ra
-    dec = gz3d.cube.dec
     map_wcs = wcs.WCS(gz3d.maps['spx_ellcoo_elliptical_azimuth'].header, naxis=2)
     # get the center of the image
-    cx, cy = map_wcs.wcs_world2pix(ra, dec, 0)
+    # cx, cy = map_wcs.wcs_world2pix(ra, dec, 0)
+    r_map = gz3d.maps['spx_ellcoo_elliptical_radius'].value
+    cy, cx = map(np.mean, np.nonzero(np.isclose(r_map, 0, atol=1)))
     # get the max radius
     r = np.sqrt(cx**2 + cy**2)
     # get the end of the line
     x = r * np.sin(np.deg2rad(-phi)) + cx
     y = r * np.cos(np.deg2rad(-phi)) + cy
     # world coords
-    ra, dec = map_wcs.wcs_pix2world([cx, x], [cy, y], 0)
+    ra_line, dec_line = map_wcs.wcs_pix2world([cx, x], [cy, y], 0)
     # image coords
-    return gz3d.wcs.wcs_world2pix(ra, dec, 0)
+    return gz3d.wcs.wcs_world2pix(ra_line, dec_line, 0)
 
 
 if __name__ == '__main__':
