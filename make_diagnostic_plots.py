@@ -10,13 +10,13 @@ output_folder = '/Volumes/Work/GZ3D/MPL5_plots_theta'
 
 
 widgets = ['Plot: ', pb.Percentage(), ' ', pb.Bar(marker='0', left='[', right=']'), ' ', pb.ETA()]
-pbar = pb.ProgressBar(widgets=widgets, max_val=len(filenames))
+pbar = pb.ProgressBar(widgets=widgets, max_value=len(filenames))
 pbar.start()
 
 for fdx, filename in enumerate(filenames['filename']):
     output_name = os.path.join(output_folder, filename.split('.')[0])
     input_name = os.path.join(filepath, filename)
-    if os.path.isfile(output_name):
+    if os.path.isfile('{0}.png'.format(output_name)):
         pbar.update(fdx + 1)
         continue
     diagnostic_plots(input_name, output_name=output_name, fdx=fdx, oi_sf=False)
