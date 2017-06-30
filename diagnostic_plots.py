@@ -52,6 +52,27 @@ def diagnostic_plots(filename, output_name=None, fdx=1, oi_sf=False):
 
 
 if __name__ == '__main__':
+    '''
     file_name = '/Volumes/Work/GZ3D/MPL5_fits/1-167242_127_5679242.fits.gz'
     diagnostic_plots(file_name)
     plt.show()
+    '''
+    import os
+    filepath = '/Volumes/Work/GZ3D/MPL5_fits'
+    output_folder = '/Users/coleman/Desktop/plots_for_talk/full'
+    id_list = [
+        '1-163516_127_5679061',
+        '1-135044_91_5682572',
+        '1-135078_127_5679767',
+        '1-135468_127_5679686',
+        '1-210923_127_5679193',
+        '1-216958_37_5680828',
+        '1-246549_127_5679436',
+        '1-37211_127_5679377',
+        '1-574355_127_5679349',
+        '1-167242_127_5679242'
+    ]
+    for fdx, mid in enumerate(id_list):
+        output_name = os.path.join(output_folder, mid)
+        input_name = os.path.join(filepath, mid) + '.fits.gz'
+        diagnostic_plots(input_name, output_name=output_name, fdx=fdx, oi_sf=False)

@@ -1,7 +1,7 @@
 import matplotlib as mpl
 import matplotlib.gridspec as gridspec
 import numpy as np
-from plot_fits_files import set_up_axes
+from plot_fits_files import set_up_axes, plot_original
 import matplotlib.pyplot as plt
 from plot_by_r import zero_theta_line
 
@@ -98,12 +98,52 @@ def plot_masks(gz3d, grid, colors=['C1', 'C0', 'C3', 'C2'], sub_grid_ratio=[0.95
     return ax1
 
 
+def plot_original_with_mask(gz3d, sub_grid_ratio=[0.9, 0.1], fdx=1):
+    fig_width = 12
+    fig_height = 4.5
+    gs = gridspec.GridSpec(1, 2)
+    gs.update(left=0.05, right=0.94, bottom=0.05, top=0.94, wspace=0.05, hspace=0.3)
+    fig = plt.figure(fdx, figsize=(fig_width, fig_height))
+    ax_00 = plot_original(gz3d, gs[0, 0], sub_grid_ratio=[0.9, 0.1])
+    ax_00.set_title('{0}'.format(gz3d.metadata['MANGAID'][0]))
+    ax_10 = plot_masks(gz3d, gs[0, 1], sub_grid_ratio=sub_grid_ratio)
+    return fig
+
+
 if __name__ == '__main__':
     from gz3d_fits import gz3d_fits
+    import mpl_style
+    import os
+    plt.style.use(mpl_style.style1)
+    '''
     file_name = '/Volumes/Work/GZ3D/MPL5_fits/1-167242_127_5679242.fits.gz'
     gz3d = gz3d_fits(file_name)
     gz3d.get_bpt()
-    fig = plt.figure(1)
-    gs = gridspec.GridSpec(1, 1)
-    plot_masks(gz3d, gs[0], sub_grid_ratio=[0.9, 0.1])
+    # fig = plt.figure(1)
+    # gs = gridspec.GridSpec(1, 1)
+    # plot_masks(gz3d, gs[0], sub_grid_ratio=[0.9, 0.1])
+    fig = plot_original_with_mask(gz3d)
     plt.show()
+    '''
+    filepath = '/Volumes/Work/GZ3D/MPL5_fits'
+    output_folder = '/Users/coleman/Desktop/plots_for_talk/masks'
+    id_list = [
+        '1-163516_127_5679061',
+        '1-135044_91_5682572',
+        '1-135078_127_5679767',
+        '1-135468_127_5679686',
+        '1-210923_127_5679193',
+        '1-216958_37_5680828',
+        '1-246549_127_5679436',
+        '1-37211_127_5679377',
+        '1-574355_127_5679349',
+        '1-167242_127_5679242'
+    ]
+    for fdx, mid in enumerate(id_list):
+        output_name = os.path.join(output_folder, mid)
+        input_name = os.path.join(filepath, mid) + '.fits.gz'
+        gz3d = gz3d_fits(input_name)
+        gz3d.get_bpt()
+        fig = plot_original_with_mask(gz3d, fdx=fdx)
+        fig.savefig('{0}_masks.png'.format(output_name))
+        plt.close(fig)
