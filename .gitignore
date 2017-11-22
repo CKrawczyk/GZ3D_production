@@ -3,3 +3,6 @@ other_scripts
 *.pyc
 .ipynb_checkpoints
 bar_or_spiral.txt
+*.csv
+.ropeproject
+*.fits
