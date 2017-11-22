@@ -233,7 +233,7 @@ class gz3d_fits(object):
                 self.mean_not_spiral = self._stack_spectra('spiral_mask_spaxel', inv=True)
                 self.mean_not_center = self._stack_spectra('center_mask_spaxel', inv=True)
 
-    def get_bpt(self, snr_min=3):
+    def get_bpt(self, snr_min=3, oi_sf=False):
         self.get_cube(maps=True)
         if self.cube != 'no_data':
             # Gets the necessary emission line maps
@@ -247,6 +247,13 @@ class gz3d_fits(object):
             self.log_nii_ha = np.ma.log10(nii / ha)
             self.log_sii_ha = np.ma.log10(sii / ha)
             self.log_oi_ha = np.ma.log10(oi / ha)
+            sf_mask_nii = ((self.log_oiii_hb < bpt.kewley_sf_nii(self.log_nii_ha)) & (self.log_nii_ha < 0.05)).filled(False)
+            sf_mask_sii = ((self.log_oiii_hb < bpt.kewley_sf_sii(self.log_sii_ha)) & (self.log_sii_ha < 0.32)).filled(False)
+            sf_mask_oi = ((self.log_oiii_hb < bpt.kewley_sf_oi(self.log_oi_ha)) & (self.log_oi_ha < -0.59)).filled(False)
+            if oi_sf:
+                self.sf_mask = sf_mask_nii & sf_mask_sii & sf_mask_oi
+            else:
+                self.sf_mask = sf_mask_nii & sf_mask_sii
 
     def bpt_in_mask(self, mask_name, bpt_name, factor=1.2):
         self.get_distance()

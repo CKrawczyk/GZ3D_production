@@ -6,7 +6,7 @@
 #    4. Save all information for the subject to a FITS file
 #
 # FITS file structrue:
-#    HDU 0: SDSS cutout image (that the used saw)
+#    HDU 0: SDSS cutout image (that the user saw)
 #    HDU 1: [image] Pixel mask of clustering resutls for galaxy center(s) ("2 sigma" ellipse about clustered points with value equal to number of points used to make the cluster)
 #    HDU 2: [image] Pixel mask of clustering resutls for star(s) ("2 sigma" ellipse about clustered points with value equal to number of points used to make the cluster)
 #    HDU 3: [image] Pixel mask of spiral arm location(s) (cleaned classification counts for each pixel)
@@ -25,7 +25,6 @@ from astropy.table import Table
 import progressbar as pb
 from collections import OrderedDict
 from sklearn.cluster import DBSCAN
-from cluster_points import cov_to_ellipse
 import numpy as np
 import scipy.linalg as sl
 import matplotlib.pyplot as plt
@@ -199,7 +198,7 @@ def mask_process(workflow_id, subject_id, column_name, wcs_header, dimensions, c
 
 def make_subject_fits(full_subject_set_id, center_workflow_id, spiral_workflow_id, bar_workflow_id, dimensions=[525, 525], image_location='/Volumes/SD_Extra/manga_images_production/MPL5', output='MPL5_fits'):
     blank_mask = np.zeros(dimensions)
-    coords = [[x, y] for y in xrange(dimensions[1]) for x in xrange(dimensions[0])]
+    coords = [[x, y] for y in range(dimensions[1]) for x in range(dimensions[0])]
     fullsample = SubjectSet.find(full_subject_set_id)
     subjects = fullsample.subjects()
     pbar = pb.ProgressBar(widgets=widgets, maxval=subjects.meta['count'])
