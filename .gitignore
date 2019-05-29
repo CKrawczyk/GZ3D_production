@@ -6,3 +6,4 @@ bar_or_spiral.txt
 *.csv
 .ropeproject
 *.fits
+*.fits.gz
