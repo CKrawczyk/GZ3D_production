@@ -33,7 +33,7 @@ import json
 import os.path
 from subprocess import call
 import pandas
-widgets = ['Aggregate: ', pb.Percentage(), ' ', pb.Bar(marker='0', left='[', right=']'), ' ', pb.ETA()]
+widgets = ['Aggregate: ', pb.Percentage(), ' ', pb.Bar(marker='0', left='[', right=']'), ' ', pb.AdaptiveETA()]
 
 # metadata on each subject is in this format
 metadata_dtype = [
@@ -104,6 +104,9 @@ def make_cluster_table():
 
 
 def cluster(X, dimensions, coords, wcs):
+    if X.dtype is np.dtype(object):
+        X = X.astype(np.float)
+    X = X[np.isfinite(X).all(axis=1)]
     mask = np.zeros(dimensions)
     db = DBSCAN(eps=5, min_samples=3).fit(X)
     cluster_table = make_cluster_table()
