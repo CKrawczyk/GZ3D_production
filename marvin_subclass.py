@@ -1,4 +1,4 @@
-from marvin.tools.spectrum import Spectrum
+from marvin.tools.quantities.spectrum import Spectrum
 from marvin.tools.cube import Cube
 import numpy as np
 import sys
