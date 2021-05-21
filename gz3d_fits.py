@@ -148,7 +148,7 @@ class gz3d_fits(object):
 
     def _get_spaxel_grid_xy(self, include_edges=False, grid_size=None):
         if grid_size is None:
-            if self.cube is not None:
+            if (self.cube is not None) and (self.cube != 'no_data'):
                 grid_size = self.cube.data['FLUX'].data.shape[1:]
             else:
                 grid_size = (spaxel_grid[self.ifu_size], spaxel_grid[self.ifu_size])
