@@ -18,7 +18,6 @@
 #    HDU 9: [table] raw spiral arm classifications
 #    HDU 10: [table] raw bar classifications
 
-from panoptes_client import SubjectSet, Panoptes, Classification
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.table import Table
@@ -33,8 +32,8 @@ from shapely.geometry import LineString
 import json
 import os.path
 from subprocess import call
-Panoptes.connect()
-widgets = ['Aggregate: ', pb.Percentage(), ' ', pb.Bar(marker='0', left='[', right=']'), ' ', pb.ETA()]
+import pandas
+widgets = ['Aggregate: ', pb.Percentage(), ' ', pb.Bar(marker='0', left='[', right=']'), ' ', pb.AdaptiveETA()]
 
 # metadata on each subject is in this format
 metadata_dtype = [
@@ -44,15 +43,12 @@ metadata_dtype = [
     ('IAUNAME', 'S19'),
     ('IFUDESIGNSIZE', '>f8'),
     ('#MANGA_TILEID', '>f8'),
-    ('NSAID', '>i8'),
+    ('nsa_id', '>i8'),
     ('explorer_link', 'S90'),
-    ('GZ2_total_classifications', '>i2'),
-    ('GZ2_bar_votes', '>i2'),
-    ('GZ2_spiral_votes', '>i2'),
-    ('specobjid', '>i8'),
-    ('dr7objid', '>i8'),
-    ('dr8objid', '>i8'),
-    ('gz2_sample', 'S70')
+    ('GZ_total_classifications', '>i2'),
+    ('GZ_bar_votes', '>i2'),
+    ('GZ_spiral_votes', '>i2'),
+    ('sample', 'S70')
 ]
 
 
@@ -108,6 +104,9 @@ def make_cluster_table():
 
 
 def cluster(X, dimensions, coords, wcs):
+    if X.dtype is np.dtype(object):
+        X = X.astype(np.float)
+    X = X[np.isfinite(X).all(axis=1)]
     mask = np.zeros(dimensions)
     db = DBSCAN(eps=5, min_samples=3).fit(X)
     cluster_table = make_cluster_table()
@@ -157,7 +156,8 @@ def path(X, dimensions, coords):
 def make_classification_table(*args):
     table = OrderedDict([
         ('classification_id', []),
-        ('user_id', []),
+        # ('user_name', []),
+        # ('user_id', []),
         ('time_stamp', [])
     ])
     for a in args:
@@ -166,26 +166,26 @@ def make_classification_table(*args):
 
 
 def record_base_classification(c, table):
-    table['classification_id'].append(c.id)
-    if 'user' in c.raw['links']:
-        table['user_id'].append(c.raw['links']['user'])
-    else:
-        table['user_id'].append('')
-    table['time_stamp'].append(c.raw['created_at'])
+    table['classification_id'].append(c.classification_id)
+    # table['user_name'].append(c.user_name)
+    # table['user_id'].append(c.user_id)
+    table['time_stamp'].append(c.created_at)
 
 
-def mask_process(workflow_id, subject_id, column_name, wcs_header, dimensions, coords):
+def mask_process(classifications, subject_id, column_name, wcs_header, dimensions, coords):
     classifications_table = make_classification_table(column_name)
     all_paths = []
-    for c in Classification.where(scope='project', workflow_id=workflow_id, subject_id=subject_id):
-        record_base_classification(c, classifications_table)
+    cdx = classifications.subject_ids == subject_id
+    for c, classification in classifications[cdx].iterrows():
+        record_base_classification(classification, classifications_table)
         paths = []
-        annotations = c.raw['annotations'][0]['value']
-        for a in annotations:
-            if 'points' in a:
-                points = [[p['x'], p['y']] for p in a['points']]
-                paths.append(points)
-                all_paths.append(points)
+        annotations = json.loads(classification['annotations'])[0]
+        if 'value' in annotations:
+            for a in annotations['value']:
+                if 'points' in a:
+                    points = [[p['x'], p['y']] for p in a['points']]
+                    paths.append(points)
+                    all_paths.append(points)
         classifications_table[column_name].append(json.dumps(paths))
     table_hdu = fits.table_to_hdu(Table(classifications_table))
     if len(all_paths):
@@ -196,27 +196,54 @@ def mask_process(workflow_id, subject_id, column_name, wcs_header, dimensions, c
     return table_hdu, mask_hdu
 
 
-def make_subject_fits(full_subject_set_id, center_workflow_id, spiral_workflow_id, bar_workflow_id, dimensions=[525, 525], image_location='/Volumes/SD_Extra/manga_images_production/MPL5', output='MPL5_fits'):
+def make_subject_fits(
+    subject_data_location,
+    center_data_location,
+    spiral_data_location,
+    bar_data_location,
+    image_location,
+    full_subject_set_id=16409,
+    dimensions=[525, 525],
+    output='MPL5_fits'
+):
+    subjects_data = pandas.read_csv(subject_data_location)
+    classifications = {
+        'center': pandas.read_csv(center_data_location),
+        'bar': pandas.read_csv(bar_data_location),
+        'spiral': pandas.read_csv(spiral_data_location)
+    }
     blank_mask = np.zeros(dimensions)
     coords = [[x, y] for y in range(dimensions[1]) for x in range(dimensions[0])]
-    fullsample = SubjectSet.find(full_subject_set_id)
-    subjects = fullsample.subjects()
-    pbar = pb.ProgressBar(widgets=widgets, maxval=subjects.meta['count'])
+    sdx = subjects_data.subject_set_id == full_subject_set_id
+    pbar = pb.ProgressBar(widgets=widgets, maxval=sdx.sum())
     pbar.start()
     idx = 0
-    for subject in subjects:
+    for s, subject in subjects_data[sdx].iterrows():
         subject_metadata = Table(dtype=metadata_dtype)
-        subject_metadata.add_row(tuple(subject.raw['metadata'][key] for key in subject_metadata.dtype.names))
+        metadata = json.loads(subject.metadata)
+        subject_metadata.add_row(tuple(metadata[key] for key in subject_metadata.dtype.names))
         subject_metadata.rename_column('#MANGA_TILEID', 'MANGA_TILEID')
         subject_metadata_hdu = fits.table_to_hdu(subject_metadata)
-        loc = '{0}/{1}_{2}.jpg'.format(image_location, subject_metadata['MANGAID'][0], int(subject_metadata['IFUDESIGNSIZE'][0]))
-        output_name = '{0}/{1}_{2}_{3}.fits'.format(output, subject_metadata['MANGAID'][0], int(subject_metadata['IFUDESIGNSIZE'][0]), subject.id)
+        output_name = '{0}/{1}_{2}_{3}.fits'.format(
+            output,
+            subject_metadata['MANGAID'][0].strip(),
+            int(subject_metadata['IFUDESIGNSIZE'][0]),
+            subject.subject_id
+        )
         if os.path.isfile('{0}.gz'.format(output_name)):
             # don't process the file if it already exists
             idx += 1
             pbar.update(idx)
             continue
+
+        loc = '{0}/{1}_{2}.jpg'.format(
+            image_location,
+            subject_metadata['MANGAID'][0].strip(),
+            int(subject_metadata['IFUDESIGNSIZE'][0])
+        )
         image = plt.imread(loc, format='jpeg')
+        # url = json.loads(subject.locations)['0']
+        # image = io.imread(url)
         wcs = define_wcs(subject_metadata['ra'][0], subject_metadata['dec'][0])
         wcs_header = wcs.to_header()
         orig_image_hdu = fits.PrimaryHDU(data=image, header=wcs_header)
@@ -224,23 +251,25 @@ def make_subject_fits(full_subject_set_id, center_workflow_id, spiral_workflow_i
         center_classifications = make_classification_table('center_points', 'star_points')
         all_center = []
         all_star = []
-        for c in Classification.where(scope='project', workflow_id=center_workflow_id, subject_id=subject.id):
-            record_base_classification(c, center_classifications)
+        cdx = classifications['center'].subject_ids == subject.subject_id
+        for c, classification in classifications['center'][cdx].iterrows():
+            record_base_classification(classification, center_classifications)
             center_points = []
             star_points = []
-            points = c.raw['annotations'][0]['value']
-            for p in points:
-                if ('x' in p) and ('y' in p):
-                    if p['tool'] == 0:
-                        # somehow the workflow_id got messed up for some classifications
-                        # so a try statement is needed
-                        loc = [p['x'], p['y']]
-                        center_points.append(loc)
-                        all_center.append(loc)
-                    elif p['tool'] == 1:
-                        loc = [p['x'], p['y']]
-                        star_points.append(loc)
-                        all_star.append(loc)
+            points = json.loads(classification['annotations'])[0]
+            if 'value' in points:
+                for p in points['value']:
+                    if ('x' in p) and ('y' in p):
+                        if p['tool'] == 0:
+                            # somehow the workflow_id got messed up for some classifications
+                            # so a try statement is needed
+                            loc = [p['x'], p['y']]
+                            center_points.append(loc)
+                            all_center.append(loc)
+                        elif p['tool'] == 1:
+                            loc = [p['x'], p['y']]
+                            star_points.append(loc)
+                            all_star.append(loc)
             center_classifications['center_points'].append(json.dumps(center_points))
             center_classifications['star_points'].append(json.dumps(star_points))
         center_star_table_hdu = fits.table_to_hdu(Table(center_classifications))
@@ -258,11 +287,37 @@ def make_subject_fits(full_subject_set_id, center_workflow_id, spiral_workflow_i
             star_table_hdu = fits.table_to_hdu(Table(make_cluster_table()))
         star_hdu = fits.ImageHDU(data=star_mask, header=wcs_header)
         # spiral arms
-        spiral_table_hdu, spiral_hdu = mask_process(spiral_workflow_id, subject.id, 'spiral_paths', wcs_header, dimensions, coords)
+        spiral_table_hdu, spiral_hdu = mask_process(
+            classifications['spiral'],
+            subject.subject_id,
+            'spiral_paths',
+            wcs_header,
+            dimensions,
+            coords
+        )
         # bars
-        bar_table_hdu, bar_hdu = mask_process(bar_workflow_id, subject.id, 'bar_paths', wcs_header, dimensions, coords)
+        bar_table_hdu, bar_hdu = mask_process(
+            classifications['bar'],
+            subject.subject_id,
+            'bar_paths',
+            wcs_header,
+            dimensions,
+            coords
+        )
         # make fits file
-        hdu_list = fits.HDUList([orig_image_hdu, center_hdu, star_hdu, spiral_hdu, bar_hdu, subject_metadata_hdu, center_table_hdu, star_table_hdu, center_star_table_hdu, spiral_table_hdu, bar_table_hdu])
+        hdu_list = fits.HDUList([
+            orig_image_hdu,
+            center_hdu,
+            star_hdu,
+            spiral_hdu,
+            bar_hdu,
+            subject_metadata_hdu,
+            center_table_hdu,
+            star_table_hdu,
+            center_star_table_hdu,
+            spiral_table_hdu,
+            bar_table_hdu
+        ])
         hdu_list.writeto(output_name)
         # compress the fits file
         call(['gzip', output_name])
@@ -273,4 +328,13 @@ def make_subject_fits(full_subject_set_id, center_workflow_id, spiral_workflow_i
 
 
 if __name__ == '__main__':
-    make_subject_fits(8199, 3513, 3515, 3514, dimensions=[525, 525], image_location='/Volumes/SD_Extra/manga_images_production/MPL5', output='/Volumes/Work/GZ3D/MPL5_fits')
+    make_subject_fits(
+        '/Volumes/Work/GZ3D/data_dumps_run_final/galaxy-zoo-3d-subjects.csv',
+        '/Volumes/Work/GZ3D/data_dumps_run_final/mark-galaxy-centers-and-foreground-stars-data-run-2-classifications.csv',
+        '/Volumes/Work/GZ3D/data_dumps_run_final/mark-spiral-arms-data-run-2-classifications.csv',
+        '/Volumes/Work/GZ3D/data_dumps_run_final/mark-galaxy-bars-data-run-2-classifications.csv',
+        '/Users/coleman/Desktop/SD_Extra/manga_images_produciton_round2/all_manga_cutouts',
+        full_subject_set_id=16409,
+        dimensions=[525, 525],
+        output='/Volumes/Work/GZ3D/Data_run_final_fits_no_user'
+    )
