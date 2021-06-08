@@ -156,8 +156,8 @@ def path(X, dimensions, coords):
 def make_classification_table(*args):
     table = OrderedDict([
         ('classification_id', []),
-        ('user_name', []),
-        ('user_id', []),
+        # ('user_name', []),
+        # ('user_id', []),
         ('time_stamp', [])
     ])
     for a in args:
@@ -167,8 +167,8 @@ def make_classification_table(*args):
 
 def record_base_classification(c, table):
     table['classification_id'].append(c.classification_id)
-    table['user_name'].append(c.user_name)
-    table['user_id'].append(c.user_id)
+    # table['user_name'].append(c.user_name)
+    # table['user_id'].append(c.user_id)
     table['time_stamp'].append(c.created_at)
 
 
@@ -329,12 +329,12 @@ def make_subject_fits(
 
 if __name__ == '__main__':
     make_subject_fits(
-        '/Volumes/Work/GZ3D/data_dumps_run_2/galaxy-zoo-3d-subjects.csv',
-        '/Volumes/Work/GZ3D/data_dumps_run_2/mark-galaxy-centers-and-foreground-stars-data-run-2-classifications.csv',
-        '/Volumes/Work/GZ3D/data_dumps_run_2/mark-spiral-arms-data-run-2-classifications.csv',
-        '/Volumes/Work/GZ3D/data_dumps_run_2/mark-galaxy-bars-data-run-2-classifications.csv',
-        '/Volumes/SD_Extra/manga_images_produciton_round2/all_manga_cutouts',
+        '/Volumes/Work/GZ3D/data_dumps_run_final/galaxy-zoo-3d-subjects.csv',
+        '/Volumes/Work/GZ3D/data_dumps_run_final/mark-galaxy-centers-and-foreground-stars-data-run-2-classifications.csv',
+        '/Volumes/Work/GZ3D/data_dumps_run_final/mark-spiral-arms-data-run-2-classifications.csv',
+        '/Volumes/Work/GZ3D/data_dumps_run_final/mark-galaxy-bars-data-run-2-classifications.csv',
+        '/Users/coleman/Desktop/SD_Extra/manga_images_produciton_round2/all_manga_cutouts',
         full_subject_set_id=16409,
         dimensions=[525, 525],
-        output='/Volumes/Work/GZ3D/Data_run_2_fits'
+        output='/Volumes/Work/GZ3D/Data_run_final_fits_no_user'
     )
